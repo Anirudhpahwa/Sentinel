@@ -10,6 +10,9 @@ export default function Navbar() {
         </Link>
         <nav className="flex items-center gap-6 text-sm text-white/80">
           <Link href="/" className="hover:text-white transition-colors">
+            Operations
+          </Link>
+          <Link href="/jobs" className="hover:text-white transition-colors">
             Jobs
           </Link>
           <Link href="/workers" className="hover:text-white transition-colors">

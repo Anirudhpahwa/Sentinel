@@ -61,3 +61,16 @@ export function formatOutcome(execution: JobExecution): string {
   if (execution.abandoned_reason) return execution.abandoned_reason;
   return "—";
 }
+
+export function formatSeconds(seconds: number | null): string {
+  if (seconds === null) return "—";
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.round(seconds % 60);
+  return `${minutes}m ${remaining}s`;
+}
+
+export function formatPercent(value: number | null): string {
+  if (value === null) return "—";
+  return `${value.toFixed(1)}%`;
+}

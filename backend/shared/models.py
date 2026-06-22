@@ -64,6 +64,13 @@ class JobExecution(Base):
     )
     abandoned_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Added for Phase 4 metrics: the only timestamp marking *when* a row last
+    # changed terminal state (e.g. when it was abandoned), since abandonment
+    # has no dedicated timestamp column of its own.
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
     job: Mapped["Job"] = relationship(back_populates="executions")
     logs: Mapped[list["ExecutionLog"]] = relationship(
         back_populates="execution", order_by="ExecutionLog.timestamp"
@@ -73,6 +80,9 @@ class JobExecution(Base):
         Index("ix_job_executions_job_id_queued_at", "job_id", "queued_at"),
         Index("ix_job_executions_worker_id", "worker_id"),
         Index("ix_job_executions_root_execution_id", "root_execution_id"),
+        Index("ix_job_executions_status", "status"),
+        Index("ix_job_executions_completed_at", "completed_at"),
+        Index("ix_job_executions_queued_at", "queued_at"),
     )
 
 

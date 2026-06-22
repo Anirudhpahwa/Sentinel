@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/__init__.py backend/__init__.py
 COPY backend/shared backend/shared
+COPY backend/metrics backend/metrics
 COPY backend/api backend/api
 
 ENV PYTHONPATH=/app

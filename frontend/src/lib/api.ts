@@ -61,6 +61,68 @@ export interface Worker {
   executions_failed: number;
 }
 
+export interface JobMetrics {
+  total_jobs: number;
+  active_jobs: number;
+  completed_jobs: number;
+  failed_jobs: number;
+  jobs_created_recent: number;
+}
+
+export interface ExecutionMetrics {
+  executions_recent: number;
+  executions_last_hour: number;
+  successful_executions_recent: number;
+  failed_executions_recent: number;
+  average_duration_seconds: number | null;
+  p95_duration_seconds: number | null;
+  current_running: number;
+}
+
+export interface WorkerMetrics {
+  total_workers: number;
+  healthy_workers: number;
+  unhealthy_workers: number;
+  offline_workers: number;
+  utilization_percent: number;
+}
+
+export interface RecoveryMetrics {
+  recovery_attempts_recent: number;
+  recovery_successes_recent: number;
+  recovery_failures_recent: number;
+  abandoned_executions_recent: number;
+  requeued_executions_recent: number;
+  recovery_success_rate_percent: number | null;
+}
+
+export interface QueueMetrics {
+  queue_depth: number;
+  oldest_pending_age_seconds: number | null;
+  average_wait_seconds: number | null;
+}
+
+export interface OverviewMetrics {
+  active_jobs: number;
+  healthy_workers: number;
+  queue_depth: number;
+  executions_recent: number;
+  success_rate_percent: number | null;
+  recovery_count_recent: number;
+}
+
+export interface TrendBucket {
+  bucket_start: string;
+  executions: number;
+  failures: number;
+  recoveries: number;
+}
+
+export interface TrendsResponse {
+  window_hours: number;
+  buckets: TrendBucket[];
+}
+
 export interface CreateJobInput {
   name: string;
   description?: string;
@@ -107,4 +169,32 @@ export function getExecutionLogs(executionId: string): Promise<ExecutionLog[]> {
 
 export function listWorkers(): Promise<Worker[]> {
   return request("/workers");
+}
+
+export function getOverviewMetrics(): Promise<OverviewMetrics> {
+  return request("/metrics/overview");
+}
+
+export function getJobMetrics(): Promise<JobMetrics> {
+  return request("/metrics/jobs");
+}
+
+export function getExecutionMetrics(): Promise<ExecutionMetrics> {
+  return request("/metrics/executions");
+}
+
+export function getWorkerMetrics(): Promise<WorkerMetrics> {
+  return request("/metrics/workers");
+}
+
+export function getRecoveryMetrics(): Promise<RecoveryMetrics> {
+  return request("/metrics/recovery");
+}
+
+export function getQueueMetrics(): Promise<QueueMetrics> {
+  return request("/metrics/queue");
+}
+
+export function getTrends(hours = 24): Promise<TrendsResponse> {
+  return request(`/metrics/trends?hours=${hours}`);
 }

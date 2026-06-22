@@ -18,5 +18,11 @@ class Settings(BaseSettings):
     recovery_check_interval_seconds: float = 5.0
     default_max_attempts: int = 3
 
+    # Single rolling-window knob shared by every "recent activity" metric
+    # (executions, recovery counts, active worker fleet, ...) -- "Today"
+    # throughout the metrics layer means "last N hours", not "since UTC
+    # midnight", which avoids dashboards looking broken right after midnight.
+    metrics_window_hours: int = 24
+
 
 settings = Settings()
