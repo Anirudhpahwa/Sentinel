@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --color-navy: #0b1e3d;
+  --color-navy-light: #15305c;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f6f8;
+  --color-border: #e2e5ea;
+  --color-text-primary: #1a1d29;
+  --color-text-secondary: #5b6472;
+
+  --color-accent: #2f6feb;
+  --color-accent-soft: #e8f0fe;
+
+  --color-success: #1b7f4c;
+  --color-success-soft: #e6f4ea;
+
+  --color-error: #b3261e;
+  --color-error-soft: #fceae9;
+
+  --color-queued: #6b7280;
+  --color-queued-soft: #eef0f2;
+}
+
+@theme inline {
+  --color-navy: var(--color-navy);
+  --color-navy-light: var(--color-navy-light);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-border: var(--color-border);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-error: var(--color-error);
+  --color-error-soft: var(--color-error-soft);
+  --color-queued: var(--color-queued);
+  --color-queued-soft: var(--color-queued-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
