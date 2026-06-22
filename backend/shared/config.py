@@ -10,5 +10,10 @@ class Settings(BaseSettings):
     scheduler_poll_interval_seconds: float = 5.0
     worker_poll_timeout_seconds: int = 5
 
+    heartbeat_interval_seconds: float = 5.0
+    health_check_interval_seconds: float = 5.0
+    worker_healthy_threshold_seconds: float = 15.0
+    worker_unhealthy_threshold_seconds: float = 30.0
+
 
 settings = Settings()

@@ -30,6 +30,11 @@ export function formatRelative(date: Date | null): string {
   return `${Math.round(seconds / 60)}m ago`;
 }
 
+export function formatRelativeFromIso(iso: string | null): string {
+  if (!iso) return "never";
+  return formatRelative(new Date(iso));
+}
+
 export function formatSchedule(job: Job): string {
   if (job.schedule_type === "ONCE") {
     const runAt = job.schedule_config["run_at"];

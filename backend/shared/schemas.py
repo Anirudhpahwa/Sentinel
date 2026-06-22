@@ -61,3 +61,14 @@ class ExecutionLogRead(BaseModel):
     timestamp: datetime
     level: str
     message: str
+
+
+class WorkerRead(BaseModel):
+    id: uuid.UUID
+    worker_name: str
+    status: str
+    started_at: datetime
+    last_heartbeat_at: datetime
+    last_seen_at: datetime
+    executions_completed: int
+    executions_failed: int

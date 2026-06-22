@@ -34,3 +34,14 @@ class LogLevel(str, Enum):
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
+
+
+class WorkerStatus(str, Enum):
+    """Computed solely by the health monitor from heartbeat staleness --
+    workers never set their own status past the bootstrap HEALTHY they
+    write at registration.
+    """
+
+    HEALTHY = "HEALTHY"
+    UNHEALTHY = "UNHEALTHY"
+    OFFLINE = "OFFLINE"

@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.shared.db import Base
-from backend.shared.enums import ExecutionStatus, JobStatus, LogLevel
+from backend.shared.enums import ExecutionStatus, JobStatus, LogLevel, WorkerStatus
 
 
 class Job(Base):
@@ -73,3 +73,28 @@ class ExecutionLog(Base):
     execution: Mapped["JobExecution"] = relationship(back_populates="logs")
 
     __table_args__ = (Index("ix_execution_logs_execution_id_timestamp", "execution_id", "timestamp"),)
+
+
+class Worker(Base):
+    __tablename__ = "workers"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    worker_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default=WorkerStatus.HEALTHY)
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+    # last_heartbeat_at is touched only by the worker's dedicated heartbeat
+    # thread and is the sole input to health-state computation. last_seen_at
+    # is touched by that same thread *and* by job-claim/completion, so a
+    # divergence between the two (heartbeat stale, last_seen fresh) is itself
+    # a meaningful signal: the heartbeat thread died but the worker is still
+    # processing jobs.
+    last_heartbeat_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (Index("ix_workers_status", "status"),)

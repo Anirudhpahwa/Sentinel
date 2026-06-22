@@ -12,6 +12,9 @@ export default function Navbar() {
           <Link href="/" className="hover:text-white transition-colors">
             Jobs
           </Link>
+          <Link href="/workers" className="hover:text-white transition-colors">
+            Workers
+          </Link>
         </nav>
       </div>
     </header>

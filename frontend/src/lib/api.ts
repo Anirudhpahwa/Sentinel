@@ -3,6 +3,7 @@ export type ExecutionStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
 export type ScheduleType = "ONCE" | "INTERVAL";
 export type JobType = "GENERATE_REPORT" | "PROCESS_DATA" | "SEND_NOTIFICATION";
 export type LogLevel = "INFO" | "WARNING" | "ERROR";
+export type WorkerStatus = "HEALTHY" | "UNHEALTHY" | "OFFLINE";
 
 export interface Job {
   id: string;
@@ -36,6 +37,17 @@ export interface ExecutionLog {
   timestamp: string;
   level: LogLevel;
   message: string;
+}
+
+export interface Worker {
+  id: string;
+  worker_name: string;
+  status: WorkerStatus;
+  started_at: string;
+  last_heartbeat_at: string;
+  last_seen_at: string;
+  executions_completed: number;
+  executions_failed: number;
 }
 
 export interface CreateJobInput {
@@ -80,4 +92,8 @@ export function listJobExecutions(jobId: string): Promise<JobExecution[]> {
 
 export function getExecutionLogs(executionId: string): Promise<ExecutionLog[]> {
   return request(`/executions/${executionId}/logs`);
+}
+
+export function listWorkers(): Promise<Worker[]> {
+  return request("/workers");
 }

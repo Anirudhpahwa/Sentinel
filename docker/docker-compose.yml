@@ -82,6 +82,18 @@ services:
     deploy:
       replicas: 2
 
+  health_monitor:
+    build:
+      context: ..
+      dockerfile: backend/health_monitor/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://sentinel:sentinel@postgres:5432/sentinel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   frontend:
     build:
       context: ..

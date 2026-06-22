@@ -5,6 +5,9 @@ const STATUS_STYLES: Record<string, string> = {
   RUNNING: "bg-accent-soft text-accent",
   SUCCEEDED: "bg-success-soft text-success",
   FAILED: "bg-error-soft text-error",
+  HEALTHY: "bg-success-soft text-success",
+  UNHEALTHY: "bg-warning-soft text-warning",
+  OFFLINE: "bg-error-soft text-error",
 };
 
 export default function StatusBadge({ status }: { status: string }) {
