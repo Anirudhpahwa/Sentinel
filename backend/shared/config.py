@@ -15,5 +15,8 @@ class Settings(BaseSettings):
     worker_healthy_threshold_seconds: float = 15.0
     worker_unhealthy_threshold_seconds: float = 30.0
 
+    recovery_check_interval_seconds: float = 5.0
+    default_max_attempts: int = 3
+
 
 settings = Settings()

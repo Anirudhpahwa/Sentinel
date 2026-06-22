@@ -4,12 +4,14 @@ import threading
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from backend.shared.config import settings
 from backend.shared.db import SessionLocal
 from backend.shared.enums import ExecutionStatus, LogLevel
-from backend.shared.models import ExecutionLog, Job, JobExecution
+from backend.shared.logs import write_log
+from backend.shared.models import Job, JobExecution
 from backend.shared.queue import dequeue_execution
 from backend.shared.redis_client import get_redis_client
 from backend.worker.job_simulators import simulate_job
@@ -24,9 +26,22 @@ logger = logging.getLogger("worker")
 WORKER_ID = socket.gethostname()
 
 
-def write_log(db: Session, execution_id: uuid.UUID, message: str, level: str = LogLevel.INFO) -> None:
-    db.add(ExecutionLog(execution_id=execution_id, message=message, level=level))
+def write_terminal_status(
+    db: Session, execution_id: uuid.UUID, status: str, result: dict, completed_at: datetime
+) -> bool:
+    """Conditional write: only succeeds if the row is still RUNNING. Returns
+    False if the recovery service already reassigned this execution (e.g. a
+    worker that was merely network-partitioned, not actually dead, finishing
+    late after recovery moved on) -- a lock-free guard against a stale write
+    clobbering state, not a prevention of the underlying duplicate work.
+    """
+    result_proxy = db.execute(
+        update(JobExecution)
+        .where(JobExecution.id == execution_id, JobExecution.status == ExecutionStatus.RUNNING)
+        .values(status=status, completed_at=completed_at, result=result)
+    )
     db.commit()
+    return result_proxy.rowcount > 0
 
 
 def process_execution(db: Session, execution_id: uuid.UUID) -> None:
@@ -43,17 +58,34 @@ def process_execution(db: Session, execution_id: uuid.UUID) -> None:
     db.commit()
     touch_last_seen(db, WORKER_ID)
 
-    write_log(db, execution.id, "Starting execution")
+    if execution.attempt_number > 1:
+        write_log(
+            db,
+            execution.id,
+            f"Starting execution (attempt {execution.attempt_number} of {execution.max_attempts}, "
+            f"recovering execution {execution.root_execution_id})",
+        )
+    else:
+        write_log(db, execution.id, "Starting execution")
     write_log(db, execution.id, "Loading configuration")
 
     result, succeeded = simulate_job(job.job_type, job.payload, lambda msg: write_log(db, execution.id, msg))
 
-    execution.status = ExecutionStatus.SUCCEEDED if succeeded else ExecutionStatus.FAILED
-    execution.completed_at = datetime.now(timezone.utc)
-    execution.result = result
-    db.commit()
-    touch_last_seen(db, WORKER_ID)
+    final_status = ExecutionStatus.SUCCEEDED if succeeded else ExecutionStatus.FAILED
+    completed_at = datetime.now(timezone.utc)
+    applied = write_terminal_status(db, execution.id, final_status, result, completed_at)
 
+    if not applied:
+        logger.warning("execution %s was reassigned during processing; discarding stale result", execution.id)
+        write_log(
+            db,
+            execution.id,
+            "Discarding result: this execution was reassigned to a new attempt while still being processed",
+            level=LogLevel.WARNING,
+        )
+        return
+
+    touch_last_seen(db, WORKER_ID)
     write_log(
         db,
         execution.id,
@@ -61,7 +93,7 @@ def process_execution(db: Session, execution_id: uuid.UUID) -> None:
         level=LogLevel.INFO if succeeded else LogLevel.ERROR,
     )
 
-    logger.info("execution %s (%s) finished: %s", execution.id, job.job_type, execution.status)
+    logger.info("execution %s (%s) finished: %s", execution.id, job.job_type, final_status)
 
 
 def heartbeat_loop(stop_event: threading.Event) -> None:

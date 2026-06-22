@@ -94,6 +94,21 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  recovery:
+    build:
+      context: ..
+      dockerfile: backend/recovery/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://sentinel:sentinel@postgres:5432/sentinel
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   frontend:
     build:
       context: ..

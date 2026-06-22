@@ -1,5 +1,12 @@
 export type JobStatus = "ACTIVE" | "COMPLETED";
-export type ExecutionStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+export type ExecutionStatus =
+  | "QUEUED"
+  | "REQUEUED"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "ABANDONED"
+  | "PERMANENTLY_FAILED";
 export type ScheduleType = "ONCE" | "INTERVAL";
 export type JobType = "GENERATE_REPORT" | "PROCESS_DATA" | "SEND_NOTIFICATION";
 export type LogLevel = "INFO" | "WARNING" | "ERROR";
@@ -29,6 +36,10 @@ export interface JobExecution {
   completed_at: string | null;
   result: Record<string, unknown> | null;
   worker_id: string | null;
+  attempt_number: number;
+  max_attempts: number;
+  root_execution_id: string | null;
+  abandoned_reason: string | null;
 }
 
 export interface ExecutionLog {

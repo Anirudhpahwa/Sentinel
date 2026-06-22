@@ -1,4 +1,4 @@
-import type { Job } from "./api";
+import type { Job, JobExecution } from "./api";
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   GENERATE_REPORT: "Generate Report",
@@ -52,4 +52,12 @@ export function formatResultSummary(result: Record<string, unknown> | null): str
   return Object.entries(result)
     .map(([key, value]) => `${key}: ${value}`)
     .join("  ·  ");
+}
+
+// ABANDONED/PERMANENTLY_FAILED rows never finished, so they have no
+// `result` -- their explanation lives in `abandoned_reason` instead.
+export function formatOutcome(execution: JobExecution): string {
+  if (execution.result) return formatResultSummary(execution.result);
+  if (execution.abandoned_reason) return execution.abandoned_reason;
+  return "—";
 }

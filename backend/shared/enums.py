@@ -10,9 +10,12 @@ class JobStatus(str, Enum):
 
 class ExecutionStatus(str, Enum):
     QUEUED = "QUEUED"
+    REQUEUED = "REQUEUED"
     RUNNING = "RUNNING"
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
+    ABANDONED = "ABANDONED"
+    PERMANENTLY_FAILED = "PERMANENTLY_FAILED"
 
 
 class ScheduleType(str, Enum):

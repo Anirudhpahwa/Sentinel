@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getExecutionLogs, getJob, listJobExecutions, type ExecutionLog } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
-import { formatDateTime, formatJobType, formatRelative, formatResultSummary, formatSchedule } from "@/lib/format";
+import { formatDateTime, formatJobType, formatOutcome, formatRelative, formatSchedule } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 
 const POLL_INTERVAL_MS = 5000;
@@ -94,11 +94,12 @@ export default function JobDetailPage() {
             <thead>
               <tr className="bg-surface-muted text-text-secondary text-xs uppercase tracking-wide">
                 <th className="text-left font-medium px-4 py-3">Status</th>
+                <th className="text-left font-medium px-4 py-3">Attempt</th>
                 <th className="text-left font-medium px-4 py-3">Queued</th>
                 <th className="text-left font-medium px-4 py-3">Started</th>
                 <th className="text-left font-medium px-4 py-3">Completed</th>
                 <th className="text-left font-medium px-4 py-3">Worker</th>
-                <th className="text-left font-medium px-4 py-3">Result</th>
+                <th className="text-left font-medium px-4 py-3">Outcome</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -113,6 +114,9 @@ export default function JobDetailPage() {
                       <StatusBadge status={execution.status} />
                     </td>
                     <td className="px-4 py-3 text-text-secondary font-mono text-xs">
+                      {execution.attempt_number} / {execution.max_attempts}
+                    </td>
+                    <td className="px-4 py-3 text-text-secondary font-mono text-xs">
                       {formatDateTime(execution.queued_at)}
                     </td>
                     <td className="px-4 py-3 text-text-secondary font-mono text-xs">
@@ -124,15 +128,19 @@ export default function JobDetailPage() {
                     <td className="px-4 py-3 text-text-secondary text-xs">{execution.worker_id ?? "—"}</td>
                     <td
                       className={`px-4 py-3 text-xs ${
-                        execution.status === "FAILED" ? "text-error" : "text-text-secondary"
+                        execution.status === "FAILED" || execution.status === "PERMANENTLY_FAILED"
+                          ? "text-error"
+                          : execution.status === "ABANDONED"
+                            ? "text-warning"
+                            : "text-text-secondary"
                       }`}
                     >
-                      {formatResultSummary(execution.result)}
+                      {formatOutcome(execution)}
                     </td>
                   </tr>
                   {expandedId === execution.id && (
                     <tr key={`${execution.id}-logs`}>
-                      <td colSpan={6} className="bg-surface-muted px-4 py-3">
+                      <td colSpan={7} className="bg-surface-muted px-4 py-3">
                         {logsLoading && logs.length === 0 ? (
                           <p className="text-xs text-text-secondary">Loading logs…</p>
                         ) : logs.length === 0 ? (

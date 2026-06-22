@@ -26,7 +26,16 @@ def run_once(db: Session, redis_client) -> int:
 
     for job in due_jobs:
         execution_id = uuid.uuid4()
-        db.add(JobExecution(id=execution_id, job_id=job.id, status=ExecutionStatus.QUEUED))
+        db.add(
+            JobExecution(
+                id=execution_id,
+                job_id=job.id,
+                status=ExecutionStatus.QUEUED,
+                attempt_number=1,
+                max_attempts=settings.default_max_attempts,
+                root_execution_id=execution_id,
+            )
+        )
 
         next_run = compute_next_run_after_execution(job.schedule_type, job.schedule_config, now)
         if next_run is None:

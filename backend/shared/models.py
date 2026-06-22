@@ -51,12 +51,29 @@ class JobExecution(Base):
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     worker_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Retry tracking: root_execution_id points at the first attempt's own id
+    # (every fresh, non-retry row points at itself), so the whole attempt
+    # chain for one logical run is a single flat query on this column rather
+    # than a linked-list walk. abandoned_reason is set only by the recovery
+    # service, alongside a matching execution_log entry -- the column gives
+    # quick structured display, the log gives the timestamped narrative.
+    attempt_number: Mapped[int] = mapped_column(nullable=False, default=1)
+    max_attempts: Mapped[int] = mapped_column(nullable=False, default=3)
+    root_execution_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("job_executions.id", ondelete="CASCADE"), nullable=True
+    )
+    abandoned_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     job: Mapped["Job"] = relationship(back_populates="executions")
     logs: Mapped[list["ExecutionLog"]] = relationship(
         back_populates="execution", order_by="ExecutionLog.timestamp"
     )
 
-    __table_args__ = (Index("ix_job_executions_job_id_queued_at", "job_id", "queued_at"),)
+    __table_args__ = (
+        Index("ix_job_executions_job_id_queued_at", "job_id", "queued_at"),
+        Index("ix_job_executions_worker_id", "worker_id"),
+        Index("ix_job_executions_root_execution_id", "root_execution_id"),
+    )
 
 
 class ExecutionLog(Base):

@@ -51,6 +51,10 @@ class JobExecutionRead(BaseModel):
     completed_at: datetime | None
     result: dict[str, Any] | None
     worker_id: str | None
+    attempt_number: int
+    max_attempts: int
+    root_execution_id: uuid.UUID | None
+    abandoned_reason: str | None
 
 
 class ExecutionLogRead(BaseModel):
