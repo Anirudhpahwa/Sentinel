@@ -11,6 +11,7 @@ import {
   getSchedulerMetrics,
   getTrends,
   listElections,
+  listSchedulers,
   listWorkers,
 } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
@@ -32,6 +33,9 @@ export default function OperationsPage() {
   const recoveryMetrics = usePolling(getRecoveryMetrics, POLL_INTERVAL_MS);
   const queueMetrics = usePolling(getQueueMetrics, POLL_INTERVAL_MS);
   const schedulerMetrics = usePolling(getSchedulerMetrics, POLL_INTERVAL_MS);
+  // "active" is the default view: archived, stale, and otherwise historical
+  // scheduler instances never appear in this cluster-state table.
+  const schedulers = usePolling(() => listSchedulers("active"), POLL_INTERVAL_MS);
   const elections = usePolling(() => listElections(5), POLL_INTERVAL_MS);
   const trends = usePolling(() => getTrends(TREND_WINDOW_HOURS), POLL_INTERVAL_MS);
   const workers = usePolling(listWorkers, POLL_INTERVAL_MS);
@@ -52,7 +56,12 @@ export default function OperationsPage() {
   const t = trends.data;
 
   const error =
-    overview.error || workerMetrics.error || executionMetrics.error || recoveryMetrics.error || queueMetrics.error;
+    overview.error ||
+    workerMetrics.error ||
+    executionMetrics.error ||
+    recoveryMetrics.error ||
+    queueMetrics.error ||
+    schedulers.error;
 
   const bucketStarts = t?.buckets.map((b) => b.bucket_start) ?? [];
 
@@ -188,6 +197,47 @@ export default function OperationsPage() {
           <MetricCard label="Scheduler Count" value={sm ? String(sm.active_schedulers) : "—"} />
           <MetricCard label="Leader Uptime" value={sm ? formatSeconds(sm.leader_uptime_seconds) : "—"} />
         </div>
+
+        <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Scheduler Status</h3>
+        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-surface-muted text-text-secondary text-xs uppercase tracking-wide">
+                <th className="text-left font-medium px-4 py-2">Scheduler ID</th>
+                <th className="text-left font-medium px-4 py-2">Role</th>
+                <th className="text-left font-medium px-4 py-2">Status</th>
+                <th className="text-left font-medium px-4 py-2">Leader Since</th>
+                <th className="text-left font-medium px-4 py-2">Last Heartbeat</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {schedulers.data?.map((scheduler) => (
+                <tr key={scheduler.id}>
+                  <td className="px-4 py-2 text-text-primary font-mono text-xs">{scheduler.scheduler_name}</td>
+                  <td className="px-4 py-2">
+                    <StatusBadge status={scheduler.role} />
+                  </td>
+                  <td className="px-4 py-2">
+                    <StatusBadge status={scheduler.status} />
+                  </td>
+                  <td className="px-4 py-2 text-text-secondary font-mono text-xs">
+                    {scheduler.role === "LEADER" ? formatDateTime(sm?.leader_since ?? null) : "—"}
+                  </td>
+                  <td className="px-4 py-2 text-text-secondary font-mono text-xs">
+                    {formatRelativeFromIso(scheduler.last_seen_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {schedulers.data?.length === 0 && (
+            <div className="px-4 py-6 text-center text-text-secondary text-sm">No active schedulers.</div>
+          )}
+        </div>
+
+        <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mt-5 mb-2">
+          Recent Elections
+        </h3>
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -201,7 +251,7 @@ export default function OperationsPage() {
               {elections.data?.map((election) => (
                 <tr key={election.id}>
                   <td className="px-4 py-2 text-text-secondary font-mono text-xs">{election.term}</td>
-                  <td className="px-4 py-2 text-text-primary">{election.leader_id}</td>
+                  <td className="px-4 py-2 text-text-secondary font-mono text-xs">{election.leader_id}</td>
                   <td className="px-4 py-2 text-text-secondary font-mono text-xs">
                     {formatDateTime(election.elected_at)}
                   </td>
