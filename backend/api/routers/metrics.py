@@ -8,12 +8,14 @@ from backend.metrics.jobs import compute_job_metrics
 from backend.metrics.overview import compute_overview
 from backend.metrics.queue import compute_queue_metrics
 from backend.metrics.recovery import compute_recovery_metrics
+from backend.metrics.scheduler import compute_scheduler_metrics
 from backend.metrics.schemas import (
     ExecutionMetrics,
     JobMetrics,
     OverviewMetrics,
     QueueMetrics,
     RecoveryMetrics,
+    SchedulerMetrics,
     TrendsResponse,
     WorkerMetrics,
 )
@@ -58,3 +60,8 @@ def get_queue_metrics(
 @router.get("/trends", response_model=TrendsResponse)
 def get_trends(hours: int = Query(default=24, ge=1, le=168), db: Session = Depends(get_db)) -> TrendsResponse:
     return compute_trends(db, hours)
+
+
+@router.get("/scheduler", response_model=SchedulerMetrics)
+def get_scheduler_metrics(db: Session = Depends(get_db)) -> SchedulerMetrics:
+    return compute_scheduler_metrics(db)

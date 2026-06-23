@@ -8,11 +8,13 @@ import {
   getExecutionMetrics,
   getRecoveryMetrics,
   getQueueMetrics,
+  getSchedulerMetrics,
   getTrends,
+  listElections,
   listWorkers,
 } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
-import { formatPercent, formatSeconds, formatRelative, formatRelativeFromIso } from "@/lib/format";
+import { formatPercent, formatSeconds, formatDateTime, formatRelative, formatRelativeFromIso } from "@/lib/format";
 import MetricCard from "@/components/MetricCard";
 import TrendChart from "@/components/TrendChart";
 import StatusBadge from "@/components/StatusBadge";
@@ -29,6 +31,8 @@ export default function OperationsPage() {
   const executionMetrics = usePolling(getExecutionMetrics, POLL_INTERVAL_MS);
   const recoveryMetrics = usePolling(getRecoveryMetrics, POLL_INTERVAL_MS);
   const queueMetrics = usePolling(getQueueMetrics, POLL_INTERVAL_MS);
+  const schedulerMetrics = usePolling(getSchedulerMetrics, POLL_INTERVAL_MS);
+  const elections = usePolling(() => listElections(5), POLL_INTERVAL_MS);
   const trends = usePolling(() => getTrends(TREND_WINDOW_HOURS), POLL_INTERVAL_MS);
   const workers = usePolling(listWorkers, POLL_INTERVAL_MS);
 
@@ -44,6 +48,7 @@ export default function OperationsPage() {
   const e = executionMetrics.data;
   const r = recoveryMetrics.data;
   const q = queueMetrics.data;
+  const sm = schedulerMetrics.data;
   const t = trends.data;
 
   const error =
@@ -173,6 +178,40 @@ export default function OperationsPage() {
           <MetricCard label="Queue Depth" value={q ? String(q.queue_depth) : "—"} />
           <MetricCard label="Oldest Pending" value={q ? formatSeconds(q.oldest_pending_age_seconds) : "—"} />
           <MetricCard label="Average Wait" value={q ? formatSeconds(q.average_wait_seconds) : "—"} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-navy uppercase tracking-wide mb-3">Scheduler</h2>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <MetricCard label="Current Leader" value={sm?.current_leader ?? "—"} />
+          <MetricCard label="Scheduler Count" value={sm ? String(sm.active_schedulers) : "—"} />
+          <MetricCard label="Leader Uptime" value={sm ? formatSeconds(sm.leader_uptime_seconds) : "—"} />
+        </div>
+        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-surface-muted text-text-secondary text-xs uppercase tracking-wide">
+                <th className="text-left font-medium px-4 py-2">Term</th>
+                <th className="text-left font-medium px-4 py-2">Leader</th>
+                <th className="text-left font-medium px-4 py-2">Elected At</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {elections.data?.map((election) => (
+                <tr key={election.id}>
+                  <td className="px-4 py-2 text-text-secondary font-mono text-xs">{election.term}</td>
+                  <td className="px-4 py-2 text-text-primary">{election.leader_id}</td>
+                  <td className="px-4 py-2 text-text-secondary font-mono text-xs">
+                    {formatDateTime(election.elected_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {elections.data?.length === 0 && (
+            <div className="px-4 py-6 text-center text-text-secondary text-sm">No elections recorded yet.</div>
+          )}
         </div>
       </section>
 

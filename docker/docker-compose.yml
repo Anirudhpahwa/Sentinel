@@ -64,14 +64,25 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    deploy:
+      replicas: 3
 
-  worker:
+  # Explicit per-instance services rather than deploy.replicas: outside
+  # Swarm mode, Compose has no way to give replicas of one service distinct
+  # identities, so there's no way for a replica to know "I am instance N".
+  # Naming these to land on the same container names replicas would have
+  # produced (docker-worker-1, docker-worker-2) keeps `docker stop
+  # docker-worker-<N>` working exactly as before, while WORKER_SERIAL lets
+  # each instance self-report a stable, human-friendly number.
+  worker-1:
     build:
       context: ..
       dockerfile: backend/worker/Dockerfile
+    container_name: docker-worker-1
     environment:
       DATABASE_URL: postgresql+psycopg2://sentinel:sentinel@postgres:5432/sentinel
       REDIS_URL: redis://redis:6379/0
+      WORKER_SERIAL: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,8 +90,23 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    deploy:
-      replicas: 2
+
+  worker-2:
+    build:
+      context: ..
+      dockerfile: backend/worker/Dockerfile
+    container_name: docker-worker-2
+    environment:
+      DATABASE_URL: postgresql+psycopg2://sentinel:sentinel@postgres:5432/sentinel
+      REDIS_URL: redis://redis:6379/0
+      WORKER_SERIAL: "2"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   health_monitor:
     build:

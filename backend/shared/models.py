@@ -110,6 +110,13 @@ class Worker(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default=WorkerStatus.HEALTHY)
     started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
+    # Set from the WORKER_SERIAL env var (assigned explicitly per service in
+    # docker-compose, since deploy.replicas cannot give replicas distinct
+    # identities outside Swarm). Nullable: local/non-Compose runs won't have
+    # it, and worker_name (the hostname) remains the real identity key
+    # everywhere else -- this is purely a human-friendly terminal reference.
+    worker_serial: Mapped[int | None] = mapped_column(nullable=True)
+
     # last_heartbeat_at is touched only by the worker's dedicated heartbeat
     # thread and is the sole input to health-state computation. last_seen_at
     # is touched by that same thread *and* by job-claim/completion, so a
@@ -125,3 +132,57 @@ class Worker(Base):
     )
 
     __table_args__ = (Index("ix_workers_status", "status"),)
+
+
+class SchedulerLeadership(Base):
+    """Singleton lease row -- exactly one logical lock, named so a future
+    second lock (e.g. for a different coordinator role) wouldn't require a
+    schema change. acquired_at/term only change when leadership actually
+    moves to a new holder; last_renewed_at changes every successful tick.
+    """
+
+    __tablename__ = "scheduler_leadership"
+
+    lock_name: Mapped[str] = mapped_column(String(50), primary_key=True)
+    leader_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    term: Mapped[int] = mapped_column(nullable=False, default=0)
+    acquired_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    last_renewed_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
+
+class Scheduler(Base):
+    """Per-instance registry, mirroring the Worker pattern -- every scheduler
+    process (leader or follower) heartbeats its own row here, which is the
+    only way to answer "how many schedulers exist" (the leadership row only
+    describes the leader, not idle followers).
+    """
+
+    __tablename__ = "schedulers"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    scheduler_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    is_leader: Mapped[bool] = mapped_column(nullable=False, default=False)
+    failed_election_attempts: Mapped[int] = mapped_column(nullable=False, default=0)
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SchedulerElection(Base):
+    """Append-only history: one row per time leadership actually changed
+    hands (not per renewal), giving "Recent Elections" and election-rate
+    metrics directly from a COUNT/LIST query.
+    """
+
+    __tablename__ = "scheduler_elections"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    term: Mapped[int] = mapped_column(nullable=False)
+    leader_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    elected_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    __table_args__ = (Index("ix_scheduler_elections_elected_at", "elected_at"),)

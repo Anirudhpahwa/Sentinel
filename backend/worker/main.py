@@ -1,4 +1,5 @@
 import logging
+import os
 import socket
 import threading
 import uuid
@@ -24,6 +25,11 @@ logger = logging.getLogger("worker")
 # stable hostname for its whole lifetime, so this is already collision-free
 # across replicas and stable if the process restarts in place.
 WORKER_ID = socket.gethostname()
+
+# Set explicitly per service in docker-compose (deploy.replicas can't give
+# replicas distinct env vars outside Swarm) -- purely a human-friendly
+# terminal reference, never used as the real identity key.
+WORKER_SERIAL = int(os.environ["WORKER_SERIAL"]) if os.environ.get("WORKER_SERIAL") else None
 
 
 def write_terminal_status(
@@ -116,7 +122,7 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        register_worker(db, WORKER_ID)
+        register_worker(db, WORKER_ID, WORKER_SERIAL)
     finally:
         db.close()
 

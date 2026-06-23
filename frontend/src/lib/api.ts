@@ -11,6 +11,8 @@ export type ScheduleType = "ONCE" | "INTERVAL";
 export type JobType = "GENERATE_REPORT" | "PROCESS_DATA" | "SEND_NOTIFICATION";
 export type LogLevel = "INFO" | "WARNING" | "ERROR";
 export type WorkerStatus = "HEALTHY" | "UNHEALTHY" | "OFFLINE";
+export type SchedulerRole = "LEADER" | "FOLLOWER";
+export type SchedulerInstanceStatus = "ACTIVE" | "STALE";
 
 export interface Job {
   id: string;
@@ -53,6 +55,7 @@ export interface ExecutionLog {
 export interface Worker {
   id: string;
   worker_name: string;
+  worker_serial: number | null;
   status: WorkerStatus;
   started_at: string;
   last_heartbeat_at: string;
@@ -121,6 +124,33 @@ export interface TrendBucket {
 export interface TrendsResponse {
   window_hours: number;
   buckets: TrendBucket[];
+}
+
+export interface SchedulerInstance {
+  id: string;
+  scheduler_name: string;
+  role: SchedulerRole;
+  status: SchedulerInstanceStatus;
+  started_at: string;
+  last_seen_at: string;
+  failed_election_attempts: number;
+}
+
+export interface SchedulerElection {
+  id: string;
+  term: number;
+  leader_id: string;
+  elected_at: string;
+}
+
+export interface SchedulerMetrics {
+  current_leader: string | null;
+  leader_since: string | null;
+  leader_uptime_seconds: number | null;
+  active_schedulers: number;
+  leader_elections_total: number;
+  leadership_changes_recent: number;
+  failed_election_attempts_total: number;
 }
 
 export interface CreateJobInput {
@@ -197,4 +227,16 @@ export function getQueueMetrics(): Promise<QueueMetrics> {
 
 export function getTrends(hours = 24): Promise<TrendsResponse> {
   return request(`/metrics/trends?hours=${hours}`);
+}
+
+export function listSchedulers(): Promise<SchedulerInstance[]> {
+  return request("/schedulers");
+}
+
+export function listElections(limit = 10): Promise<SchedulerElection[]> {
+  return request(`/schedulers/elections?limit=${limit}`);
+}
+
+export function getSchedulerMetrics(): Promise<SchedulerMetrics> {
+  return request("/metrics/scheduler");
 }

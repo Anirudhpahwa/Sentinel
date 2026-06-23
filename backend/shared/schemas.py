@@ -70,9 +70,31 @@ class ExecutionLogRead(BaseModel):
 class WorkerRead(BaseModel):
     id: uuid.UUID
     worker_name: str
+    worker_serial: int | None
     status: str
     started_at: datetime
     last_heartbeat_at: datetime
     last_seen_at: datetime
     executions_completed: int
     executions_failed: int
+
+
+class SchedulerRead(BaseModel):
+    # Constructed manually in the router, like WorkerRead -- role/status are
+    # derived (from is_leader and heartbeat staleness), not raw columns.
+    id: uuid.UUID
+    scheduler_name: str
+    role: Literal["LEADER", "FOLLOWER"]
+    status: Literal["ACTIVE", "STALE"]
+    started_at: datetime
+    last_seen_at: datetime
+    failed_election_attempts: int
+
+
+class SchedulerElectionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    term: int
+    leader_id: str
+    elected_at: datetime

@@ -63,3 +63,13 @@ class TrendBucket(BaseModel):
 class TrendsResponse(BaseModel):
     window_hours: int
     buckets: list[TrendBucket]
+
+
+class SchedulerMetrics(BaseModel):
+    current_leader: str | None
+    leader_since: datetime | None
+    leader_uptime_seconds: float | None
+    active_schedulers: int
+    leader_elections_total: int
+    leadership_changes_recent: int
+    failed_election_attempts_total: int

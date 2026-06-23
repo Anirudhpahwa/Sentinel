@@ -30,6 +30,7 @@ export default function WorkersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-muted text-text-secondary text-xs uppercase tracking-wide">
+              <th className="text-left font-medium px-4 py-3">Worker ID</th>
               <th className="text-left font-medium px-4 py-3">Worker Name</th>
               <th className="text-left font-medium px-4 py-3">Status</th>
               <th className="text-left font-medium px-4 py-3">Last Heartbeat</th>
@@ -41,6 +42,9 @@ export default function WorkersPage() {
           <tbody className="divide-y divide-border">
             {workers?.map((worker) => (
               <tr key={worker.id} className="hover:bg-surface-muted transition-colors">
+                <td className="px-4 py-3 font-mono text-xs text-navy">
+                  {worker.worker_serial !== null ? `docker-worker-${worker.worker_serial}` : "—"}
+                </td>
                 <td className="px-4 py-3 font-medium text-navy">{worker.worker_name}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={worker.status} />

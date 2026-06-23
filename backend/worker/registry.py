@@ -13,12 +13,13 @@ from backend.shared.enums import WorkerStatus
 from backend.shared.models import Worker
 
 
-def register_worker(db: Session, worker_name: str) -> None:
+def register_worker(db: Session, worker_name: str, worker_serial: int | None) -> None:
     now = datetime.now(timezone.utc)
     stmt = (
         pg_insert(Worker)
         .values(
             worker_name=worker_name,
+            worker_serial=worker_serial,
             status=WorkerStatus.HEALTHY,
             started_at=now,
             last_heartbeat_at=now,
@@ -27,6 +28,7 @@ def register_worker(db: Session, worker_name: str) -> None:
         .on_conflict_do_update(
             index_elements=[Worker.worker_name],
             set_={
+                "worker_serial": worker_serial,
                 "started_at": now,
                 "last_heartbeat_at": now,
                 "last_seen_at": now,

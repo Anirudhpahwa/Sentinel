@@ -30,6 +30,7 @@ def _to_worker_read(worker: Worker, counts: dict[str, int]) -> WorkerRead:
     return WorkerRead(
         id=worker.id,
         worker_name=worker.worker_name,
+        worker_serial=worker.worker_serial,
         status=worker.status,
         started_at=worker.started_at,
         last_heartbeat_at=worker.last_heartbeat_at,
@@ -41,7 +42,11 @@ def _to_worker_read(worker: Worker, counts: dict[str, int]) -> WorkerRead:
 
 @router.get("", response_model=list[WorkerRead])
 def list_workers(db: Session = Depends(get_db)) -> list[WorkerRead]:
-    workers = list(db.execute(select(Worker).order_by(Worker.worker_name)).scalars().all())
+    workers = list(
+        db.execute(select(Worker).order_by(Worker.worker_serial.is_(None), Worker.worker_serial, Worker.worker_name))
+        .scalars()
+        .all()
+    )
     counts = _execution_counts(db)
     return [_to_worker_read(w, counts.get(w.worker_name, {})) for w in workers]
 

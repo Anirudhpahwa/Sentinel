@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routers import executions, jobs, metrics, workers
+from backend.api.routers import executions, jobs, metrics, schedulers, workers
 
 app = FastAPI(title="Sentinel API")
 
@@ -17,6 +17,7 @@ app.add_middleware(
 app.include_router(jobs.router)
 app.include_router(executions.router)
 app.include_router(workers.router)
+app.include_router(schedulers.router)
 app.include_router(metrics.router)
 
 

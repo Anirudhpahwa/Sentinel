@@ -24,5 +24,10 @@ class Settings(BaseSettings):
     # midnight", which avoids dashboards looking broken right after midnight.
     metrics_window_hours: int = 24
 
+    # Renewed every scheduler tick (scheduler_poll_interval_seconds); a lease
+    # of 3x the tick interval tolerates two missed renewals before another
+    # instance can take over, avoiding flapping on transient jitter.
+    leader_lease_seconds: float = 15.0
+
 
 settings = Settings()
