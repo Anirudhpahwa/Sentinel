@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { listJobs } from "@/lib/api";
+import { deleteJob, listJobs } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
 import { formatDateTime, formatJobType, formatRelative, formatSchedule } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
@@ -9,7 +10,23 @@ import StatusBadge from "@/components/StatusBadge";
 const POLL_INTERVAL_MS = 5000;
 
 export default function JobsPage() {
-  const { data: jobs, error, isLoading, lastUpdatedAt } = usePolling(listJobs, POLL_INTERVAL_MS);
+  const { data: jobs, error, isLoading, lastUpdatedAt, refetch } = usePolling(listJobs, POLL_INTERVAL_MS);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(jobId: string, jobName: string) {
+    if (!window.confirm(`Are you sure you want to delete "${jobName}"? Future scheduling will stop, but historical execution records will remain.`)) {
+      return;
+    }
+    setDeletingId(jobId);
+    try {
+      await deleteJob(jobId);
+      refetch();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,6 +62,7 @@ export default function JobsPage() {
               <th className="text-left font-medium px-4 py-3">Status</th>
               <th className="text-left font-medium px-4 py-3">Next Run</th>
               <th className="text-left font-medium px-4 py-3">Created By</th>
+              <th className="text-left font-medium px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -67,6 +85,15 @@ export default function JobsPage() {
                   {job.status === "ACTIVE" ? formatDateTime(job.next_run_at) : "—"}
                 </td>
                 <td className="px-4 py-3 text-text-secondary">{job.created_by}</td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => handleDelete(job.id, job.name)}
+                    disabled={deletingId === job.id}
+                    className="text-xs text-error hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === job.id ? "Deleting…" : "Delete"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

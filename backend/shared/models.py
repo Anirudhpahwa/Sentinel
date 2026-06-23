@@ -34,9 +34,18 @@ class Job(Base):
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    # Soft-delete: job_executions cascades on jobs.id, so a hard delete would
+    # destroy execution history. deleted_at hides the job from default views
+    # and (via the scheduler's query) stops future scheduling, while leaving
+    # every execution and log fully intact and reachable by direct id.
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
     executions: Mapped[list["JobExecution"]] = relationship(back_populates="job")
 
-    __table_args__ = (Index("ix_jobs_status_next_run_at", "status", "next_run_at"),)
+    __table_args__ = (
+        Index("ix_jobs_status_next_run_at", "status", "next_run_at"),
+        Index("ix_jobs_deleted_at", "deleted_at"),
+    )
 
 
 class JobExecution(Base):
@@ -126,12 +135,20 @@ class Worker(Base):
     last_heartbeat_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
+    # Archival, not deletion: workers are operational entities whose history
+    # stays valuable indefinitely. Cleared automatically on re-registration
+    # (booting up and registering is itself proof the worker isn't gone).
+    archived_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (Index("ix_workers_status", "status"),)
+    __table_args__ = (
+        Index("ix_workers_status", "status"),
+        Index("ix_workers_archived_at", "archived_at"),
+    )
 
 
 class SchedulerLeadership(Base):
@@ -166,10 +183,16 @@ class Scheduler(Base):
     failed_election_attempts: Mapped[int] = mapped_column(nullable=False, default=0)
     started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+    # Same archival contract as Worker.archived_at.
+    archived_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    __table_args__ = (Index("ix_schedulers_archived_at", "archived_at"),)
 
 
 class SchedulerElection(Base):
@@ -186,3 +209,22 @@ class SchedulerElection(Base):
     elected_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
 
     __table_args__ = (Index("ix_scheduler_elections_elected_at", "elected_at"),)
+
+
+class AdminAction(Base):
+    """Audit trail for every maintenance/administrative action -- deletes,
+    archives, restores, and resets. Visible in the Admin UI, not just
+    buried in container logs, since "make cleanup actions visible" is an
+    explicit requirement, not just a nice-to-have.
+    """
+
+    __tablename__ = "admin_actions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    performed_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    __table_args__ = (Index("ix_admin_actions_performed_at", "performed_at"),)

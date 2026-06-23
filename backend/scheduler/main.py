@@ -32,7 +32,13 @@ SCHEDULER_ID = socket.gethostname()
 def run_once(db: Session, redis_client) -> int:
     now = datetime.now(timezone.utc)
     due_jobs = list(
-        db.execute(select(Job).where(Job.status == JobStatus.ACTIVE, Job.next_run_at <= now)).scalars().all()
+        db.execute(
+            select(Job).where(
+                Job.status == JobStatus.ACTIVE, Job.deleted_at.is_(None), Job.next_run_at <= now
+            )
+        )
+        .scalars()
+        .all()
     )
 
     scheduled = 0

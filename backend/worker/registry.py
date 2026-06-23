@@ -33,6 +33,11 @@ def register_worker(db: Session, worker_name: str, worker_serial: int | None) ->
                 "last_heartbeat_at": now,
                 "last_seen_at": now,
                 "updated_at": now,
+                # A worker that's booting up and registering is, by
+                # definition, not gone -- clear any prior archival rather
+                # than requiring a manual restore for something that's
+                # already back online.
+                "archived_at": None,
             },
         )
     )

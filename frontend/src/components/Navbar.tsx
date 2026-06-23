@@ -18,6 +18,9 @@ export default function Navbar() {
           <Link href="/workers" className="hover:text-white transition-colors">
             Workers
           </Link>
+          <Link href="/admin" className="hover:text-white transition-colors">
+            Admin
+          </Link>
         </nav>
       </div>
     </header>

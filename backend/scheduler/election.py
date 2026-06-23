@@ -30,7 +30,9 @@ def register_scheduler(db: Session, scheduler_name: str) -> None:
         )
         .on_conflict_do_update(
             index_elements=[Scheduler.scheduler_name],
-            set_={"started_at": now, "last_seen_at": now, "updated_at": now},
+            # Re-registering clears any prior archival, same contract as
+            # worker registration -- booting up is proof it isn't gone.
+            set_={"started_at": now, "last_seen_at": now, "updated_at": now, "archived_at": None},
         )
     )
     db.execute(stmt)

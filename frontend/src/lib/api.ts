@@ -13,6 +13,7 @@ export type LogLevel = "INFO" | "WARNING" | "ERROR";
 export type WorkerStatus = "HEALTHY" | "UNHEALTHY" | "OFFLINE";
 export type SchedulerRole = "LEADER" | "FOLLOWER";
 export type SchedulerInstanceStatus = "ACTIVE" | "STALE";
+export type EntityView = "active" | "offline" | "archived";
 
 export interface Job {
   id: string;
@@ -27,6 +28,7 @@ export interface Job {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export interface JobExecution {
@@ -57,6 +59,7 @@ export interface Worker {
   worker_name: string;
   worker_serial: number | null;
   status: WorkerStatus;
+  is_archived: boolean;
   started_at: string;
   last_heartbeat_at: string;
   last_seen_at: string;
@@ -131,6 +134,7 @@ export interface SchedulerInstance {
   scheduler_name: string;
   role: SchedulerRole;
   status: SchedulerInstanceStatus;
+  is_archived: boolean;
   started_at: string;
   last_seen_at: string;
   failed_election_attempts: number;
@@ -151,6 +155,23 @@ export interface SchedulerMetrics {
   leader_elections_total: number;
   leadership_changes_recent: number;
   failed_election_attempts_total: number;
+}
+
+export interface AdminAction {
+  id: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  detail: string | null;
+  performed_at: string;
+}
+
+export interface ResetSummary {
+  jobs_deleted: number;
+  executions_deleted: number;
+  workers_archived: number;
+  schedulers_archived: number;
+  performed_at: string;
 }
 
 export interface CreateJobInput {
@@ -197,8 +218,16 @@ export function getExecutionLogs(executionId: string): Promise<ExecutionLog[]> {
   return request(`/executions/${executionId}/logs`);
 }
 
-export function listWorkers(): Promise<Worker[]> {
-  return request("/workers");
+export function listWorkers(view: EntityView = "active"): Promise<Worker[]> {
+  return request(`/workers?view=${view}`);
+}
+
+export function archiveWorker(workerId: string): Promise<Worker> {
+  return request(`/workers/${workerId}/archive`, { method: "POST" });
+}
+
+export function restoreWorker(workerId: string): Promise<Worker> {
+  return request(`/workers/${workerId}/restore`, { method: "POST" });
 }
 
 export function getOverviewMetrics(): Promise<OverviewMetrics> {
@@ -229,8 +258,16 @@ export function getTrends(hours = 24): Promise<TrendsResponse> {
   return request(`/metrics/trends?hours=${hours}`);
 }
 
-export function listSchedulers(): Promise<SchedulerInstance[]> {
-  return request("/schedulers");
+export function listSchedulers(view: EntityView = "active"): Promise<SchedulerInstance[]> {
+  return request(`/schedulers?view=${view}`);
+}
+
+export function archiveScheduler(schedulerId: string): Promise<SchedulerInstance> {
+  return request(`/schedulers/${schedulerId}/archive`, { method: "POST" });
+}
+
+export function restoreScheduler(schedulerId: string): Promise<SchedulerInstance> {
+  return request(`/schedulers/${schedulerId}/restore`, { method: "POST" });
 }
 
 export function listElections(limit = 10): Promise<SchedulerElection[]> {
@@ -239,4 +276,19 @@ export function listElections(limit = 10): Promise<SchedulerElection[]> {
 
 export function getSchedulerMetrics(): Promise<SchedulerMetrics> {
   return request("/metrics/scheduler");
+}
+
+export function deleteJob(jobId: string): Promise<Job> {
+  return request(`/jobs/${jobId}`, { method: "DELETE" });
+}
+
+export function listAdminActions(limit = 20): Promise<AdminAction[]> {
+  return request(`/admin/actions?limit=${limit}`);
+}
+
+export function resetDemoEnvironment(): Promise<ResetSummary> {
+  return request("/admin/reset-demo-environment", {
+    method: "POST",
+    body: JSON.stringify({ confirm: "RESET" }),
+  });
 }

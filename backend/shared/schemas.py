@@ -38,6 +38,7 @@ class JobRead(BaseModel):
     created_by: str
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None
 
 
 class JobExecutionRead(BaseModel):
@@ -72,6 +73,7 @@ class WorkerRead(BaseModel):
     worker_name: str
     worker_serial: int | None
     status: str
+    is_archived: bool
     started_at: datetime
     last_heartbeat_at: datetime
     last_seen_at: datetime
@@ -86,6 +88,7 @@ class SchedulerRead(BaseModel):
     scheduler_name: str
     role: Literal["LEADER", "FOLLOWER"]
     status: Literal["ACTIVE", "STALE"]
+    is_archived: bool
     started_at: datetime
     last_seen_at: datetime
     failed_election_attempts: int
@@ -98,3 +101,30 @@ class SchedulerElectionRead(BaseModel):
     term: int
     leader_id: str
     elected_at: datetime
+
+
+class AdminActionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    action: str
+    target_type: str
+    target_id: str | None
+    detail: str | None
+    performed_at: datetime
+
+
+class ResetConfirmation(BaseModel):
+    # Pydantic rejects anything but this exact string before the handler
+    # even runs -- a deliberate friction point for the platform's single
+    # most destructive endpoint, enforced server-side rather than relying
+    # only on a frontend confirmation dialog.
+    confirm: Literal["RESET"]
+
+
+class ResetSummary(BaseModel):
+    jobs_deleted: int
+    executions_deleted: int
+    workers_archived: int
+    schedulers_archived: int
+    performed_at: datetime

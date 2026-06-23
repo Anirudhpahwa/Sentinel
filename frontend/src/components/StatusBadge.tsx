@@ -11,6 +11,9 @@ const STATUS_STYLES: Record<string, string> = {
   REQUEUED: "bg-warning-soft text-warning",
   ABANDONED: "bg-warning-soft text-warning",
   PERMANENTLY_FAILED: "bg-error-soft text-error",
+  LEADER: "bg-success-soft text-success",
+  FOLLOWER: "bg-queued-soft text-queued",
+  STALE: "bg-error-soft text-error",
 };
 
 export default function StatusBadge({ status }: { status: string }) {
